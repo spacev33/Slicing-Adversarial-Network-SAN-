@@ -32,6 +32,46 @@ def D_train(x, G, D, D_optimizer, criterion):
         
     return  D_loss.data.item()
 
+def SAN_D_train(x, G, D, D_optimizer, criterion):
+    #=======================Train the discriminator=======================#
+    D.zero_grad()
+
+    # train discriminator on real
+    x_real, y_real = x, torch.ones(x.shape[0], 1)
+    x_real, y_real = x_real.to(device), y_real.to(device)
+
+    D_output = D(x_real, flg_train=True)
+    loss_real = san_loss(D_output, is_real=True)
+
+    
+    # train discriminator on fake
+    z = torch.randn(x.shape[0], 100).to(device)
+    
+    #D_output =  D(x_fake, flg_train=True)
+    x_fake = G(z).detach()
+    out_fake = D(x_fake, flg_train=True)
+    loss_fake = san_loss(out_fake, is_real=False)
+    
+    # gradient backprop & optimize ONLY D's parameters
+    loss_D = loss_real + loss_fake
+    loss_D.backward()
+    D_optimizer.step()
+        
+    return  loss_D.data.item()
+
+def san_loss(disc_out, is_real):
+    fun = disc_out["fun"]
+    dir = disc_out["dir"]
+
+    if is_real:
+        loss_fun = torch.relu(1 - fun).mean()
+        loss_dir = - dir.mean()
+    else:
+        loss_fun = torch.relu(1 + fun).mean()
+        loss_dir = dir.mean()
+
+    return loss_fun + loss_dir
+
 
 def G_train(x, G, D, G_optimizer, criterion):
     #=======================Train the generator=======================#
@@ -41,8 +81,8 @@ def G_train(x, G, D, G_optimizer, criterion):
     y = torch.ones(x.shape[0], 1).to(device)
                  
     G_output = G(z)
-    D_output = D(G_output)
-    G_loss = criterion(D_output, y)
+    D_output = D(G_output, flg_train=False)
+    G_loss = torch.relu(1 - D_output.view(-1, 1)).mean()
 
     # gradient backprop & optimize ONLY G's parameters
     G_loss.backward()

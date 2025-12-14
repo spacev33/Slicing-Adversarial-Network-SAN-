@@ -7,8 +7,8 @@ import torch.nn as nn
 import torch.optim as optim
 
 
-from model import Generator, Discriminator
-from utils import D_train, G_train, save_models
+from model import Generator, SAN_Discriminator
+from utils import SAN_D_train, G_train, save_models
 
 
 
@@ -52,15 +52,12 @@ if __name__ == '__main__':
     device = "mps" if torch.backends.mps.is_available() else device
 
     G = torch.nn.DataParallel(Generator(g_output_dim = mnist_dim)).to(device)
-    D = torch.nn.DataParallel(Discriminator(mnist_dim)).to(device)
+    D = torch.nn.DataParallel(SAN_Discriminator(mnist_dim)).to(device)
 
 
     # model = DataParallel(model).cuda()
     print('Model loaded.')
-    # Optimizer 
-
-
-
+   
     # define loss
     criterion = nn.BCELoss() 
 
@@ -74,7 +71,7 @@ if __name__ == '__main__':
     for epoch in trange(1, n_epoch+1, leave=True):           
         for batch_idx, (x, _) in enumerate(train_loader):
             x = x.view(-1, mnist_dim)
-            D_train(x, G, D, D_optimizer, criterion)
+            SAN_D_train(x, G, D, D_optimizer, criterion)
             G_train(x, G, D, G_optimizer, criterion)
 
         if epoch % 10 == 0:

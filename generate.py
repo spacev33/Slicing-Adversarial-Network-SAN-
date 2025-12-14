@@ -39,9 +39,9 @@ if __name__ == '__main__':
             z = torch.randn(args.batch_size, 100).to(device)
             x = model(z)
             x = x.reshape(args.batch_size, 28, 28)
-            for k in range(x.shape[0]):
+            for k in range(x.shape[0]): # il genere batch_size images à chaque iteration
                 if n_samples<10000:
-                    torchvision.utils.save_image(x[k:k+1], os.path.join('samples', f'{n_samples}.png'))         
+                    torchvision.utils.save_image(x[k:k+1], os.path.join('samples', f'{n_samples}.png'), normalize=True)         
                     n_samples += 1
 
 
