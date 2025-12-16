@@ -45,9 +45,9 @@ class SAN_Discriminator(nn.Module):
 
     
     def forward(self,x,class_ids=None, flg_train=True):
-        x = F.leaky_relu(self.fc1(x), 0.1)
-        x = F.leaky_relu(self.fc2(x), 0.1)
-        x = F.leaky_relu(self.fc3(x), 0.1)
+        x = F.leaky_relu(self.fc1(x), 0.2)
+        x = F.leaky_relu(self.fc2(x), 0.2)
+        x = F.leaky_relu(self.fc3(x), 0.2)
 
         h_feature = x
         h_feature = torch.flatten(h_feature, start_dim=1)
