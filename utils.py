@@ -5,32 +5,57 @@ device = 'cuda' if torch.cuda.is_available() else 'cpu'
 device = "mps" if torch.backends.mps.is_available() else device
 
 def D_train(x, G, D, D_optimizer, criterion):
+    n_projections=50
     #=======================Train the discriminator=======================#
     D.zero_grad()
 
-    # train discriminator on real
-    x_real, y_real = x, torch.ones(x.shape[0], 1)
-    x_real, y_real = x_real.to(device), y_real.to(device)
+    # ======================= Train the critic ======================= #
+    D.zero_grad()
 
-    D_output = D(x_real)
-    D_real_loss = criterion(D_output, y_real)
-    D_real_score = D_output
+    # real samples
+    x_real = x.to(device)
+    h_real = D(x_real)             # (batch, d)
 
-    # train discriminator on facke
-    z = torch.randn(x.shape[0], 100).to(device)
-    x_fake, y_fake = G(z), torch.zeros(x.shape[0], 1).to(device)
+    # fake samples
+    z = torch.randn(x.shape[0], 100, device=device)
+    x_fake = G(z).detach()          # IMPORTANT
+    h_fake = D(x_fake)
 
-    D_output =  D(x_fake)
-    
-    D_fake_loss = criterion(D_output, y_fake)
-    D_fake_score = D_output
+    # sliced Wasserstein loss (critic wants to MAXIMIZE it)
+    D_loss = sliced_wasserstein_distance(h_real, h_fake, n_projections)
 
-    # gradient backprop & optimize ONLY D's parameters
-    D_loss = D_real_loss + D_fake_loss
     D_loss.backward()
     D_optimizer.step()
-        
-    return  D_loss.data.item()
+
+    return D_loss.item()
+
+def sliced_wasserstein_distance(X, Y, n_projections=50):
+    """
+    X, Y : tensors of shape (batch_size, d)
+    n_projections : number of random directions
+    """
+
+    device = X.device
+    d = X.shape[1]
+
+    # 1. Sample random directions on the unit sphere
+
+
+    sw = 0.0
+    for _ in range(n_projections):
+        theta = torch.randn(d, device=device)
+        theta = theta / torch.norm(theta)
+
+        proj_X = X @ theta  # (batch_size,)
+        proj_Y = Y @ theta # (batch_size,)
+
+        proj_X_sorted, _ = torch.sort(proj_X)
+        proj_Y_sorted, _ = torch.sort(proj_Y)
+
+        # 4. Compute distance
+        sw += torch.mean(torch.abs(proj_X_sorted - proj_Y_sorted))
+
+    return sw / n_projections
 
 def SAN_D_train(x, G, D, D_optimizer, criterion):
     #=======================Train the discriminator=======================#
@@ -73,7 +98,7 @@ def san_loss(disc_out, is_real):
     return loss_fun + loss_dir
 
 
-def G_train(x, G, D, G_optimizer, criterion):
+def SAN_G_train(x, G, D, G_optimizer, criterion):
     #=======================Train the generator=======================#
     G.zero_grad()
 
@@ -90,14 +115,43 @@ def G_train(x, G, D, G_optimizer, criterion):
         
     return G_loss.data.item()
 
+def G_train(x, G, D, G_optimizer, criterion):
+    n_projections=50
+    #=======================Train the generator=======================#
+    G.zero_grad()
+
+    z = torch.randn(x.shape[0], 100, device=device)
+    x_fake = G(z)
+    h_fake = D(x_fake)
+
+    with torch.no_grad():
+        h_real = D(x.to(device))
+
+    G_loss = sliced_wasserstein_distance(h_real, h_fake, n_projections)
 
 
-def save_models(G, D, folder):
-    torch.save(G.state_dict(), os.path.join(folder,'G.pth'))
-    torch.save(D.state_dict(), os.path.join(folder,'D.pth'))
+    G_loss.backward()
+    G_optimizer.step()
+
+    return G_loss.item()
+
+
+
+def save_models(G, D, folder, args):
+    if args.model == 'SAN':
+        torch.save(G.state_dict(), os.path.join(folder,'G.pth'))
+        torch.save(D.state_dict(), os.path.join(folder,'D.pth'))
+    if args.model == 'GAN':
+        torch.save(G.state_dict(), os.path.join(args.model,'G.pth'))
+        torch.save(D.state_dict(), os.path.join(args.model,'D.pth'))
 
 
 def load_model(G, folder):
     ckpt = torch.load(os.path.join(folder,'G.pth'), map_location = "cpu")
     G.load_state_dict({k.replace('module.', ''): v for k, v in ckpt.items()})
     return G
+
+def load_model_D(D, folder):
+    ckpt = torch.load(os.path.join(folder,'D.pth'), map_location = "cpu")
+    D.load_state_dict({k.replace('module.', ''): v for k, v in ckpt.items()})
+    return D

@@ -40,29 +40,25 @@ class SAN_Discriminator(nn.Module):
         self.fc1 = nn.Linear(d_input, dim)
         self.fc2 = nn.Linear(self.fc1.out_features, self.fc1.out_features//2)
         self.fc3 = nn.Linear(self.fc2.out_features, self.fc2.out_features//2)
-        
-        # SAN : prototypes angulaires
-        self.use_class = num_class > 1
-        self.fc_w = nn.Parameter(
-            torch.randn(num_class if self.use_class else 1, dim//4))
+        self.fc_w = nn.Parameter(torch.randn(1, dim//4))
     
 
     
     def forward(self,x,class_ids=None, flg_train=True):
-        x = F.leaky_relu(self.fc1(x), 0.2)
-        x = F.leaky_relu(self.fc2(x), 0.2)
-        x = F.leaky_relu(self.fc3(x), 0.2)
+        x = F.leaky_relu(self.fc1(x), 0.1)
+        x = F.leaky_relu(self.fc2(x), 0.1)
+        x = F.leaky_relu(self.fc3(x), 0.1)
 
         h_feature = x
         h_feature = torch.flatten(h_feature, start_dim=1)
 
-        # Recuperation des poids de la dernière couche
-        weights = self.fc_w
+        # Recuperation des distance de la dernière couche
+        omega = self.fc_w
         # On va normaliser la dernière couche
-        direction = F.normalize(weights, dim=1)
+        direction = F.normalize(omega, dim=1)
         # On va calculer la norme
-        norme = torch.norm(weights, dim=1).unsqueeze(1)
-        # On veut garder la norme
+        norme = torch.norm(omega, dim=1).unsqueeze(1)
+        # On projette
         h_feature = h_feature * norme
     
         # Séparation entre fonction et direction

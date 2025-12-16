@@ -5,10 +5,12 @@ import argparse
 from torchvision import datasets, transforms
 import torch.nn as nn
 import torch.optim as optim
+import matplotlib.pyplot as plt
 
 
-from model import Generator, SAN_Discriminator
-from utils import SAN_D_train, G_train, save_models
+from model import Generator, SAN_Discriminator, GAN_Discriminator
+from utils import SAN_D_train, D_train, SAN_G_train, G_train, save_models
+from visualize import visualize_san
 
 
 
@@ -21,6 +23,8 @@ if __name__ == '__main__':
                       help="The learning rate to use for training.")
     parser.add_argument("--batch_size", type=int, default=64, 
                         help="Size of mini-batches for SGD")
+    parser.add_argument("--model", type=str, default='SAN',
+                        help="Type of Discriminator : GAN or SAN")
 
     args = parser.parse_args()
 
@@ -51,8 +55,12 @@ if __name__ == '__main__':
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     device = "mps" if torch.backends.mps.is_available() else device
 
-    G = torch.nn.DataParallel(Generator(g_output_dim = mnist_dim)).to(device)
-    D = torch.nn.DataParallel(SAN_Discriminator(mnist_dim)).to(device)
+    if args.model == 'GAN':
+        G = torch.nn.DataParallel(Generator(g_output_dim = mnist_dim)).to(device)
+        D = torch.nn.DataParallel(GAN_Discriminator(mnist_dim)).to(device)
+    elif args.model == 'SAN':
+        G = torch.nn.DataParallel(Generator(g_output_dim = mnist_dim)).to(device)
+        D = torch.nn.DataParallel(SAN_Discriminator(mnist_dim)).to(device)
 
 
     # model = DataParallel(model).cuda()
@@ -71,11 +79,24 @@ if __name__ == '__main__':
     for epoch in trange(1, n_epoch+1, leave=True):           
         for batch_idx, (x, _) in enumerate(train_loader):
             x = x.view(-1, mnist_dim)
-            SAN_D_train(x, G, D, D_optimizer, criterion)
-            G_train(x, G, D, G_optimizer, criterion)
+            if args.model == 'GAN':
+                D_train(x, G, D, D_optimizer, criterion)
+                G_train(x, G, D, G_optimizer, criterion)
+            elif args.model == 'SAN':
+                SAN_D_train(x, G, D, D_optimizer, criterion)
+                SAN_G_train(x, G, D, G_optimizer, criterion)
 
         if epoch % 10 == 0:
-            save_models(G, D, 'checkpoints')
+            save_models(G, D, "checkpoints", args)
+
+        if epoch % 50 == 0:
+            visualize_san(
+            G=G,
+            D=D,
+            real_loader=train_loader,
+            epoch=epoch + 1,
+            save=True, show=False
+        )
                 
     print('Training done')
 
