@@ -22,7 +22,7 @@ if __name__ == '__main__':
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     device = "mps" if torch.backends.mps.is_available() else device
     model = Generator(g_output_dim = mnist_dim).to(device)
-    model = load_model(model, 'checkpoints')
+    model = load_model(model, 'lr-checkpoints')
     model = torch.nn.DataParallel(model).to(device)
     model.eval()
 
@@ -43,6 +43,10 @@ if __name__ == '__main__':
                 if n_samples<10000:
                     torchvision.utils.save_image(x[k:k+1], os.path.join('samples', f'{n_samples}.png'), normalize=True)         
                     n_samples += 1
+            """for k in range(0,x.shape[0],16): # il genere batch_size images à chaque iteration
+                if n_samples<10000:
+                    torchvision.utils.save_image(x[k:k+16].float().unsqueeze(1), os.path.join('samples', f'{n_samples}.png'),nrow=4, normalize=True)         
+                    n_samples += 16"""
 
 
     
