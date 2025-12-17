@@ -94,7 +94,7 @@ if __name__ == '__main__':
             G=G,
             D=D,
             real_loader=train_loader,
-            epoch=epoch + 1,
+            epoch=epoch,
             save=True, show=False
         )
                 
