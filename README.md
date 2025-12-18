@@ -34,6 +34,8 @@ Where our best model achieved the following performance:
 
 These correspond to the **best precision and recall** obtained amongst **the entire class**.
 
+*These scores are not optimal because they correspond to a simple type of GAN architecture that we used only to show the effectiness of the methdo. We could further improve the performances by using convolutional layers rather than linear.* 
+
 ---
 
 ## Best Model Configuration
