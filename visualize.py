@@ -30,19 +30,19 @@ def extract_features(G, D, real_loader, z_dim=100, n_samples=2000):
         _, h_fake = D(x_fake, flg_train=False)
         fake_feats.append(h_fake)
 
-    real_feats = torch.cat(real_feats)[:n_samples].cpu().numpy()
+    real_feats = torch.cat(real_feats)[:n_samples].cpu().numpy() #on va concaténer toutes les features réelles
     fake_feats = torch.cat(fake_feats)[:n_samples].cpu().numpy()
 
     return real_feats, fake_feats
 
 
 def plot_cdf(data, label):
-    sorted_data = np.sort(data)
-    y = np.linspace(0, 1, len(sorted_data))
-    plt.plot(sorted_data, y, label=label)
+    sorted_data = np.sort(data) #on va trier les données
+    y = np.linspace(0, 1, len(sorted_data)) #on crée des valeurs y entre 0 et 1
+    plt.plot(sorted_data, y, label=label) #on trace la courbe
 
 
-def visualize_san(G, D, real_loader, epoch,
+def visualize(G, D, real_loader, epoch,
                   z_dim=100, n_samples=2000,
                   save=True, show=False):
 
@@ -52,9 +52,9 @@ def visualize_san(G, D, real_loader, epoch,
 
     # Direction SAN
     mean_diff = real_feats.mean(axis=0) - fake_feats.mean(axis=0)
-    omega = mean_diff / np.linalg.norm(mean_diff)
+    omega = mean_diff / np.linalg.norm(mean_diff) #direction normalisée
 
-    proj_real = real_feats @ omega
+    proj_real = real_feats @ omega #projection des features sur la direction
     proj_fake = fake_feats @ omega
 
     plt.figure(figsize=(6,4))

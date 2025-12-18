@@ -27,11 +27,12 @@ class GAN_Discriminator(nn.Module):
         self.fc4 = nn.Linear(self.fc3.out_features, 1)
 
     # forward method
-    def forward(self, x):
+    def forward(self, x, flg_train=True):
         x = F.leaky_relu(self.fc1(x), 0.2)
         x = F.leaky_relu(self.fc2(x), 0.2)
         x = F.leaky_relu(self.fc3(x), 0.2)
-        return torch.sigmoid(self.fc4(x))
+        h_features = self.fc4(x)
+        return torch.sigmoid(h_features), h_features
 
 
 class SAN_Discriminator(nn.Module):
@@ -58,7 +59,7 @@ class SAN_Discriminator(nn.Module):
         direction = F.normalize(omega, dim=1)
         # On va calculer la norme
         norme = torch.norm(omega, dim=1).unsqueeze(1)
-        # On projette
+        # Projection de h_feature sur la direction normalisée
         h_feature = h_feature * norme
     
         # Séparation entre fonction et direction
@@ -68,4 +69,4 @@ class SAN_Discriminator(nn.Module):
             out = dict(fun=out_fun, dir=out_dir)
         else:
             out = (h_feature * direction).sum(dim=1)
-        return out
+        return out, h_feature

@@ -11,6 +11,8 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Generate Normalizing Flow.')
     parser.add_argument("--batch_size", type=int, default=2048,
                       help="The batch size to use for training.")
+    parser.add_argument("--model", type=str, default='SAN',
+                        help="Folder where the model is saved : GAN or SAN")
     args = parser.parse_args()
 
 
@@ -22,7 +24,7 @@ if __name__ == '__main__':
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     device = "mps" if torch.backends.mps.is_available() else device
     model = Generator(g_output_dim = mnist_dim).to(device)
-    model = load_model(model, 'checkpoints')
+    model = load_model(model, args.model)
     model = torch.nn.DataParallel(model).to(device)
     model.eval()
 

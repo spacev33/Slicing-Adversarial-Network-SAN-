@@ -10,18 +10,18 @@ import matplotlib.pyplot as plt
 
 from model import Generator, SAN_Discriminator, GAN_Discriminator
 from utils import SAN_D_train, D_train, SAN_G_train, G_train, save_models
-from visualize import visualize_san
+from visualize import visualize
 
 
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Train GAN.')
+    parser = argparse.ArgumentParser(description='Train GAN or SAN.')
     parser.add_argument("--epochs", type=int, default=100,
                         help="Number of epochs for training.")
-    parser.add_argument("--lr", type=float, default=0.0002,
+    parser.add_argument("--lr", type=float, default=0.0001,
                       help="The learning rate to use for training.")
-    parser.add_argument("--batch_size", type=int, default=64, 
+    parser.add_argument("--batch_size", type=int, default=128, 
                         help="Size of mini-batches for SGD")
     parser.add_argument("--model", type=str, default='SAN',
                         help="Type of Discriminator : GAN or SAN")
@@ -29,7 +29,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
 
-    os.makedirs('chekpoints', exist_ok=True)
+    os.makedirs(args.model, exist_ok=True)
     os.makedirs('data', exist_ok=True)
 
     # Data Pipeline
@@ -87,10 +87,10 @@ if __name__ == '__main__':
                 SAN_G_train(x, G, D, G_optimizer, criterion)
 
         if epoch % 10 == 0:
-            save_models(G, D, "checkpoints", args)
+            save_models(G, D, args)
 
         if epoch % 50 == 0:
-            visualize_san(
+            visualize(
             G=G,
             D=D,
             real_loader=train_loader,
